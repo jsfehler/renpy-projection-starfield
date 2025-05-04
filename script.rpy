@@ -20,7 +20,7 @@ init:
     define space = Solid((0, 0, 0, 255))  
 
     # Create the starfield displayables. Optional keyword arguments can tweak the default display.
-    $starfield = ProjectionStarfield(rect_d, amount=128, depth=16, perspective=128.0, speed=5)
+    $ starfield = ProjectionStarfield(rect_d, amount=128, depth=16, perspective=128.0, speed=5)
 
     # Create another with an image used.
     image star:
@@ -29,7 +29,7 @@ init:
         #linear 2.0 rotate 360
         #repeat
 
-    $i_starfield = ProjectionStarfield("star", amount=128, depth=16, perspective=128.0, speed=5)       
+    $ i_starfield = ProjectionStarfield("star", amount=128, depth=16, perspective=128.0, speed=5)       
  
 # Screens where the displayables are shown 
 screen starfield:
