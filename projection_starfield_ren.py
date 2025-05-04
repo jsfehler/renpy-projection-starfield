@@ -24,10 +24,10 @@ class Star:
 
 
 class ProjectionStarfield(renpy.Displayable, NoRollback):
-    """ Fires a displayable from the centre of the screen outwards.
+    """Fires a displayable from the centre of the screen outwards.
     
     Args:
-        image (displayable): Visual representation of a star.
+        image (str|displayable): Visual representation of a star.
         amount (int): Number of stars to display
         depth (int): Highest z coordinate
         perspective (float): Amount of perspective projection to use
@@ -56,23 +56,21 @@ class ProjectionStarfield(renpy.Displayable, NoRollback):
         self.transforms = self.__precalculate_transforms(self.image)  
         self.transforms_amount = len(self.transforms) - 1
 
-        lower = -25
-        higher = 25
-
-        self.stars = [
-            Star(
-                x=random.randrange(lower, higher), 
-                y=random.randrange(lower, higher), 
-                z=random.randrange(1, self.depth), 
-                transform_index=random.randrange(0, self.transforms_amount),
-            ) for _ in range(self.amount)
-        ]
-        
+        # Use random values to populate the starfield.
         self.ranges = range(-25, 25)
         # Spawning in the center of the screen is ugly
         self.ranges.remove(0)
-        
+
         self.depth_ranges = range(1, self.depth)
+
+        self.stars = [
+            Star(
+                x=choice(self.ranges),
+                y=choice(self.ranges), 
+                z=choice(self.depth_ranges),
+                transform_index=random.randrange(0, self.transforms_amount),
+            ) for _ in range(self.amount)
+        ]
 
         self.oldst = None
     
@@ -92,7 +90,7 @@ class ProjectionStarfield(renpy.Displayable, NoRollback):
         while current_depth > 0:
             all_depths.append(current_depth)
             current_depth -= step
-                
+
         # All possible transform factors
         # Using Linear Interpolation, make distant stars smaller and darker than closer stars.            
         t_factors = [(1 - float(d) / self.depth) * 2 for d in all_depths]
@@ -107,10 +105,18 @@ class ProjectionStarfield(renpy.Displayable, NoRollback):
         star.y = choice(self.ranges)
         star.z = choice(self.depth_ranges)
         star.transform_index = 0
+    
+    def perspective_projection(self, star: Star) -> tuple[int, int]:
+        # Convert the 3D coordinates to 2D using perspective projection.
+        factor = self.perspective / star.z
+        x = int(star.x * factor) + self.origin_x
+        y = int(star.y * factor) + self.origin_y
+
+        return (x, y)
 
     def visit(self):
         return self.transforms
-    
+
     def render(self, width, height, st, at):
         if self.oldst is None:
             self.oldst = st
@@ -118,11 +124,11 @@ class ProjectionStarfield(renpy.Displayable, NoRollback):
         delta_time = st - self.oldst
         self.oldst = st
             
-        render = renpy.Render(0, 0)
-        place = render.place
-        
         w = config.screen_width
         h = config.screen_height
+
+        render = renpy.Render(0, 0)
+        place = render.place
         
         move = abs(delta_time * self.speed)
         
@@ -132,7 +138,7 @@ class ProjectionStarfield(renpy.Displayable, NoRollback):
 
             # Star becomes bigger and more visible the further down the list it goes
             star.transform_index += 1
-            
+
             # The star is at maximum size/brightness, stop increasing the index
             star.transform_index = min(star.transform_index, self.transforms_amount)
 
@@ -141,15 +147,12 @@ class ProjectionStarfield(renpy.Displayable, NoRollback):
                 self._reset_star(star)
 
             transform = self.transforms[star.transform_index]
-                
+
             # Don't place a displayable if it's going to be invisible
             if transform.alpha <= 0.0:
                 continue
-                
-            # Convert the 3D coordinates to 2D using perspective projection.
-            k = self.perspective / star.z
-            x = int(star.x * k + self.origin_x)
-            y = int(star.y * k + self.origin_y)
+
+            x, y = self.perspective_projection(star)
 
             # Draw the star (if it's visible on screen).
             if 0 <= x < w and 0 <= y < h:
